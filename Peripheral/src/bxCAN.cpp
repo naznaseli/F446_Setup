@@ -121,15 +121,10 @@ void CAN2_RX1_IRQHandler(void){
 void bxCAN::setup(CAN_TypeDef *can, GPIO_TypeDef *can_tx, uint8_t tx_pin, GPIO_TypeDef *can_rx, uint8_t rx_pin){
     this->CANx = can;
     tx = new GPIO(can_tx, tx_pin, GPIO::ALTERNATE);
-    rx = new GPIO(can_tx, tx_pin, GPIO::ALTERNATE);
+    rx = new GPIO(can_rx, rx_pin, GPIO::ALTERNATE);
 
     clockEnable();
     setAlternate();
-
-    //RCC->APB1ENR |= RCC_APB1ENR_CAN2EN;
-   //GPIOB->AFR[1] |= (0x09 << 16);
-   //GPIOB->AFR[1] |= (0x09 << 20);
-
 
     CAN_Setup();
 }
@@ -140,6 +135,7 @@ void bxCAN::CAN_Setup(void){
 
     //BTR
     CANx->BTR |= (6-1) << CAN_BTR_BRP_Pos;
+    //CANx->BTR |= (30-1) << CAN_BTR_BRP_Pos;
     CANx->BTR |= (7-1) << CAN_BTR_TS1_Pos;
     CANx->BTR |= (4-1) << CAN_BTR_TS2_Pos;
     CANx->BTR |= (1-1) << CAN_BTR_SJW_Pos;
@@ -167,13 +163,25 @@ void bxCAN::CAN_Setup(void){
     //    NVIC_EnableIRQ(CAN2_RX1_IRQn);
     //}
 
+    //filter
+    CANx->FMR |= CAN_FMR_FINIT; //filter initialization mode
+    //CANx->FS1R = 0xFFFFFFFF;
+    CANx->FA1R = 0; //filter is not active
+    for(int i = 0; i < 28; i++){
+        //CANx->sFilterRegister[i].FR1 = 0xFFFFFFFF;
+        //CANx->sFilterRegister[i].FR2 = 0xFFFFFFFF;
+    }
+    CANx->FMR &= ~(CAN_FMR_FINIT);  //filter active
+
     //enter the normal mode
     modeTransition(NORMAL);
 }
 
 void bxCAN::clockEnable(void){
-    if(CANx == CAN1) RCC->APB1ENR |= RCC_APB1ENR_CAN1EN;
-    if(CANx == CAN2) RCC->APB1ENR |= RCC_APB1ENR_CAN2EN;
+    //if(CANx == CAN1) RCC->APB1ENR |= RCC_APB1ENR_CAN1EN;
+    //if(CANx == CAN2) RCC->APB1ENR |= RCC_APB1ENR_CAN2EN;
+    RCC->APB1ENR |= RCC_APB1ENR_CAN1EN;
+    RCC->APB1ENR |= RCC_APB1ENR_CAN2EN;
 }
 
 void bxCAN::setAlternate(void){
@@ -197,10 +205,8 @@ void bxCAN::modeTransition(OPERATING_MODE mode){
         case NORMAL:
             if(CANx->MSR & CAN_MSR_SLAK)    //if sleep mode now
                 CANx->MCR &= ~(CAN_MCR_SLEEP);
-            CANx->MCR &= ~(CAN_MCR_INRQ);
-            usart3_printf("before");
+            CANx->MCR &= ~(CAN_MCR_INRQ);   //leave initialization mode
             while(((CANx->MSR & CAN_MSR_INAK) == CAN_MSR_INAK) || ((CANx->MSR & CAN_MSR_SLAK) == CAN_MSR_SLAK));
-            usart3_printf("after");
             break;
 
         default:
@@ -246,19 +252,21 @@ void bxCAN::transmit(CanMsg *txMessage){
     if(CANx->TSR & CAN_TSR_TME0){
 
     }
-    //��̑��M���[���{�b�N�X��T��
     switch(CANx->TSR){
         case CAN_TSR_TME0:
             transmit_mailbox = 0;
+            //usart3_printf("box-0");
             break;
         case CAN_TSR_TME1:
             transmit_mailbox = 1;
+            //usart3_printf("box-1");
             break;
         case CAN_TSR_TME2:
             transmit_mailbox = 2;
+            //usart3_printf("box-2");
             break;
         default:
-            //�󂫂��Ȃ�
+            //usart3_printf("box-error");
             return;
     }
 
@@ -281,33 +289,79 @@ void bxCAN::transmit(CanMsg *txMessage){
 }
 
 void bxCAN::transmit(uint16_t id, uint8_t length, uint8_t data[]){
-    uint8_t mailbox;    //0-2
+    //usart3_printf("%d\t", id);
+    //usart3_printf("%d\t", length);
+    //usart3_printf("%d\t", data[0]);
+    //usart3_printf("%d\n", data[1]);
+    uint8_t mailbox = 0;    //0-2
 
     //check that all the tx mailboxes are not full
-    if(CANx->TSR & (CAN_TSR_TME0 | CAN_TSR_TME1 | CAN_TSR_TME2)){
-        mailbox = (CANx->TSR & CAN_TSR_CODE) >> CAN_TSR_CODE_Pos;
-    }else{
+    //if(CANx->TSR & (CAN_TSR_TME0 | CAN_TSR_TME1 | CAN_TSR_TME2)){
+    //    mailbox = (CANx->TSR & CAN_TSR_CODE) >> CAN_TSR_CODE_Pos;
+    //}else{
+    //    //すぐ抜けないで送信完了待ち&タイムアウト処理
+    //    return;
+    //}
+    if(CANx->TSR & CAN_TSR_TME0){
+        mailbox = 0;
+    }
+    else if(CANx->TSR & CAN_TSR_TME0){
+        mailbox = 1;
+    }
+    else if(CANx->TSR & CAN_TSR_TME0){
+        mailbox = 2;
+    }
+    else{
         return;
     }
 
+    //clear
+    //CANx->sTxMailBox[mailbox].TIR = 0;
+    CANx->sTxMailBox[mailbox].TIR &= CAN_TI0R_TXRQ;
+    CANx->sTxMailBox[mailbox].TDTR = 0;
+    CANx->sTxMailBox[mailbox].TDHR = 0;
+    CANx->sTxMailBox[mailbox].TDLR = 0;
+
     //set up the STID
-    CANx->sTxMailBox[mailbox].TIR = ((id & 0x7FF) << CAN_TI0R_STID_Pos) | (1 << CAN_TI0R_RTR_Pos);
+    //CANx->sTxMailBox[mailbox].TIR = ((id & 0x7FF) << CAN_TI0R_STID_Pos);
+    CAN1->sTxMailBox[mailbox].TIR = ((id << CAN_TI0R_STID_Pos) & 0xFFE00000);
+
+    if(length == 0){
+        //RTR = 1
+    }
 
     //set up the DLC
-    CANx->sTxMailBox[mailbox].TDTR = (length & 0xF);
+    CAN1->sTxMailBox[mailbox].TDTR = (length & 0xF);
 
     //set up the data
-    CANx->sTxMailBox[mailbox].TDHR = (
+    CAN1->sTxMailBox[mailbox].TDHR = (
             (uint32_t)data[7] << CAN_TDH0R_DATA7_Pos |
             (uint32_t)data[6] << CAN_TDH0R_DATA6_Pos |
             (uint32_t)data[5] << CAN_TDH0R_DATA5_Pos |
             (uint32_t)data[4] << CAN_TDH0R_DATA4_Pos);
-    CANx->sTxMailBox[mailbox].TDLR = (
+    CAN1->sTxMailBox[mailbox].TDLR = (
             (uint32_t)data[3] << CAN_TDL0R_DATA3_Pos |
             (uint32_t)data[2] << CAN_TDL0R_DATA2_Pos |
             (uint32_t)data[1] << CAN_TDL0R_DATA1_Pos |
             (uint32_t)data[0] << CAN_TDL0R_DATA0_Pos);
 
+    for(int i = 0; i < 32; i++){
+        usart3_printf("%d ", CANx->sTxMailBox[mailbox].TIR >> (31-i) & 0x01);
+    }
+    usart3_printf("\n");
+    for(int i = 0; i < 32; i++){
+        usart3_printf("%d ", CANx->sTxMailBox[mailbox].TDTR >> (31-i) & 0x01);
+    }
+    usart3_printf("\n");
+    for(int i = 0; i < 32; i++){
+        usart3_printf("%d ", CANx->sTxMailBox[mailbox].TDHR >> (31-i) & 0x01);
+    }
+    usart3_printf("\n");
+    for(int i = 0; i < 32; i++){
+        usart3_printf("%d ", CANx->sTxMailBox[mailbox].TDLR >> (31-i) & 0x01);
+    }
+    usart3_printf("\n");
+
     //request transmission
-    CANx->sTxMailBox[mailbox].TIR |= CAN_TI0R_TXRQ;
+    //CANx->sTxMailBox[mailbox].TIR |= CAN_TI0R_TXRQ;
 }

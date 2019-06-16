@@ -79,28 +79,28 @@ void TIM::setupTimer(TIM_TypeDef *tim){
 
 void TIM::setAlternate(void){
     if((TIMx == TIM1) | (TIMx == TIM2)){
-        if(ch1 != NULL) ch1->setAlternate(AF1);
-        if(ch2 != NULL) ch2->setAlternate(AF1);
-        if(ch3 != NULL) ch3->setAlternate(AF1);
-        if(ch4 != NULL) ch4->setAlternate(AF1);
+        if(ch1->gpio != NULL) ch1->gpio->setAlternate(AF1);
+        if(ch2->gpio != NULL) ch2->gpio->setAlternate(AF1);
+        if(ch3->gpio != NULL) ch3->gpio->setAlternate(AF1);
+        if(ch4->gpio != NULL) ch4->gpio->setAlternate(AF1);
     }
     if((TIMx == TIM3) | (TIMx == TIM4) | (TIMx == TIM5)){
-        if(ch1 != NULL) ch1->setAlternate(AF2);
-        if(ch2 != NULL) ch2->setAlternate(AF2);
-        if(ch3 != NULL) ch3->setAlternate(AF2);
-        if(ch4 != NULL) ch4->setAlternate(AF2);
+        if(ch1->gpio != NULL) ch1->gpio->setAlternate(AF2);
+        if(ch2->gpio != NULL) ch2->gpio->setAlternate(AF2);
+        if(ch3->gpio != NULL) ch3->gpio->setAlternate(AF2);
+        if(ch4->gpio != NULL) ch4->gpio->setAlternate(AF2);
     }
     if((TIMx == TIM8) | (TIMx == TIM9) | (TIMx == TIM10) | (TIMx == TIM11)){
-        if(ch1 != NULL) ch1->setAlternate(AF3);
-        if(ch2 != NULL) ch2->setAlternate(AF3);
-        if(ch3 != NULL) ch3->setAlternate(AF3);
-        if(ch4 != NULL) ch4->setAlternate(AF3);
+        if(ch1->gpio != NULL) ch1->gpio->setAlternate(AF3);
+        if(ch2->gpio != NULL) ch2->gpio->setAlternate(AF3);
+        if(ch3->gpio != NULL) ch3->gpio->setAlternate(AF3);
+        if(ch4->gpio != NULL) ch4->gpio->setAlternate(AF3);
     }
     if((TIMx == TIM12) | (TIMx == TIM13) | (TIMx == TIM14)){
-        if(ch1 != NULL) ch1->setAlternate(AF9);
-        if(ch2 != NULL) ch2->setAlternate(AF9);
-        if(ch3 != NULL) ch3->setAlternate(AF9);
-        if(ch4 != NULL) ch4->setAlternate(AF9);
+        if(ch1->gpio != NULL) ch1->gpio->setAlternate(AF9);
+        if(ch2->gpio != NULL) ch2->gpio->setAlternate(AF9);
+        if(ch3->gpio != NULL) ch3->gpio->setAlternate(AF9);
+        if(ch4->gpio != NULL) ch4->gpio->setAlternate(AF9);
     }
 }
 
@@ -110,8 +110,8 @@ void TIM::setupPwmOutput(TIM_TypeDef *tim,
         GPIO_TypeDef *pwm_ch2, uint8_t ch2_pin){
 
     this->TIMx = tim;
-    ch1 = new GPIO(pwm_ch1, ch1_pin, GPIO::ALTERNATE);
-    ch2 = new GPIO(pwm_ch2, ch2_pin, GPIO::ALTERNATE);
+    ch1->gpio = new GPIO(pwm_ch1, ch1_pin, GPIO::ALTERNATE);
+    ch2->gpio = new GPIO(pwm_ch2, ch2_pin, GPIO::ALTERNATE);
 
     clockEnable();
     setAlternate();
@@ -139,10 +139,15 @@ void TIM::setupPwmOutput(TIM_TypeDef *tim,
         GPIO_TypeDef *pwm_ch4, uint8_t ch4_pin){
 
     this->TIMx = tim;
-    ch1 = new GPIO(pwm_ch1, ch1_pin, GPIO::ALTERNATE);
-    ch2 = new GPIO(pwm_ch2, ch2_pin, GPIO::ALTERNATE);
-    ch3 = new GPIO(pwm_ch3, ch3_pin, GPIO::ALTERNATE);
-    ch4 = new GPIO(pwm_ch4, ch4_pin, GPIO::ALTERNATE);
+    ch1 = new Channel(1);
+    ch2 = new Channel(2);
+    ch3 = new Channel(3);
+    ch4 = new Channel(4);
+
+    ch1->gpio = new GPIO(pwm_ch1, ch1_pin, GPIO::ALTERNATE);
+    ch2->gpio = new GPIO(pwm_ch2, ch2_pin, GPIO::ALTERNATE);
+    ch3->gpio = new GPIO(pwm_ch3, ch3_pin, GPIO::ALTERNATE);
+    ch4->gpio = new GPIO(pwm_ch4, ch4_pin, GPIO::ALTERNATE);
 
     clockEnable();
     setAlternate();
@@ -165,8 +170,8 @@ void TIM::setupPwmOutput(TIM_TypeDef *tim,
 
 void TIM::setupEncoder(TIM_TypeDef *tim, GPIO_TypeDef *enc_ch1, uint8_t ch1_pin, GPIO_TypeDef *enc_ch2, uint8_t ch2_pin){
     this->TIMx = tim;
-    ch1 = new GPIO(enc_ch1, ch1_pin, GPIO::ALTERNATE);
-    ch2 = new GPIO(enc_ch2, ch2_pin, GPIO::ALTERNATE);
+    ch1->gpio = new GPIO(enc_ch1, ch1_pin, GPIO::ALTERNATE);
+    ch2->gpio = new GPIO(enc_ch2, ch2_pin, GPIO::ALTERNATE);
 
     clockEnable();
     setAlternate();
@@ -204,10 +209,47 @@ bool TIM::isEnable(void){
     return false;
 }
 
+TIM::Channel::Channel(int num){
+    if(!(num == 1 || num == 2 || num == 3 || num == 4)){
+        return;
+    }
+
+    ch_num = num;
+
+    //Channelごとに分割して初期setup
+    //ネガポジ注意
+    switch(ch_num){
+        case 1:
+            break;
+        case 2:
+            break;
+        case 3:
+            break;
+        case 4:
+            break;
+    }
+}
+
 //チャンネルごとに作る必要
 //TIM内部にchクラスを作成
-void TIM::duty(uint16_t duty){
+void TIM::Channel::setDuty(uint16_t duty, int positive){
     //if(duty > pwm_period) duty = pwm_period;
-    float f_duty = (float)(duty/65535);
-    TIMx->CCR1 = (uint32_t)(60000*f_duty-1);
+    if(positive){
+
+    }else{
+
+    }
+
+    //float f_duty = (float)(duty/65535);
+    switch(ch_num){
+        case 1:
+            //TIMx->CCR1 = (uint32_t)(60000*duty-1);
+            break;
+        case 2:
+            break;
+        case 3:
+            break;
+        case 4:
+            break;
+    }
 }

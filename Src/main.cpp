@@ -18,31 +18,41 @@ int main(void)
 
     usart1_printf("usart1\n");
     usart3_printf("usart3\n");
+    //requestFlag = true;
+    bool flag = true;
 
     while(1){
         led0.toggle();
-        delay_ms(50);
+        delay_ms(100);
 
         //状態、状態、mailbox0の送信リクエスト、１、２、
         //usart3_printf("%d\t%d\t%d\t%d\t%d\n", (CAN2->MSR & CAN_MSR_INAK), (CAN2->MSR & CAN_MSR_SLAK), (CAN2->sTxMailBox[0].TIR & CAN_TI0R_TXRQ), (CAN2->sTxMailBox[1].TIR & CAN_TI0R_TXRQ), (CAN2->sTxMailBox[2].TIR & CAN_TI0R_TXRQ));
         for(int i = 0; i < 32; i++){
             //usart3_printf("%d ", (uint32_t)(CAN2->TSR>>(31-i) & 0x01));
+            //usart3_printf("%d ", (uint32_t)(CAN2->RF0R>>(31-i) & 0x01));
+            //usart3_printf("%d ", (uint32_t)(CAN2->RF1R>>(31-i) & 0x01));
             //usart3_printf("%d ", (uint32_t)(CAN2->ESR>>(31-i) & 0x01));
             //usart3_printf("%d ", (uint32_t)(CAN2->MCR>>(31-i) & 0x01));
-            usart3_printf("%d ", (uint32_t)(CAN2->MSR>>(31-i) & 0x01));
+            //usart3_printf("%d ", (uint32_t)(CAN2->MSR>>(31-i) & 0x01));
+            //usart3_printf("%d ", (uint32_t)(CAN2->sTxMailBox[0].TIR>>(31-i) & 0x01));
         }
-        //for(int i = 0; i < 6; i++){
-        ////    //usart3_printf("%d ", (uint32_t)(CAN2->RF1R>>5-i) & 0x01);
-        //}
+        //usart3_printf("%d ", (uint32_t)CAN2->TSR>>26 & 0x01);
+        //usart3_printf("%d ", (uint32_t)CAN2->TSR>>1 & 0x01);
+        //usart3_printf("%d ", (uint32_t)CAN2->TSR & 0x01);
 
-        usart3_printf("\n");
-        if(!button0.read()){
-            requestFlag = true;
-        //    led1.write(1);
+        //usart3_printf("\n");
+
+        if(!button0.read() & flag){
+            //requestFlag = true;
+            uint8_t data[] = {0xAA, 0x55};
+            can.transmit(0x10, 2, data);
+            flag = false;
         }else{
             requestFlag = false;
-        //    led1.write(0);
         }
+
+        //usart3_printf("%d\t", CAN2->MSR & CAN_MSR_INAK);
+        //usart3_printf("%d\n", CAN2->MSR & CAN_MSR_SLAK);
     }
 
     while(1){

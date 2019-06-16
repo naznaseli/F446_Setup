@@ -461,11 +461,11 @@ g_pfnVectors:
 	.weak	CAN2_TX_IRQHandler
 	.thumb_set CAN2_TX_IRQHandler,Default_Handler
 	
-	.weak	CAN2_RX0_IRQHandler
-	.thumb_set CAN2_RX0_IRQHandler,Default_Handler
+	//.weak	CAN2_RX0_IRQHandler
+	//.thumb_set CAN2_RX0_IRQHandler,Default_Handler
 	
-	.weak	CAN2_RX1_IRQHandler
-	.thumb_set CAN2_RX1_IRQHandler,Default_Handler
+	//.weak	CAN2_RX1_IRQHandler
+	//.thumb_set CAN2_RX1_IRQHandler,Default_Handler
 	
 	.weak	CAN2_SCE_IRQHandler
 	.thumb_set CAN2_SCE_IRQHandler,Default_Handler

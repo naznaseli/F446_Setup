@@ -30,6 +30,16 @@ public:
         TIMER, PWMOUT, ENCODER
     }mode;
 
+    class Channel{
+    public:
+        Channel(int num);
+        int ch_num;
+        GPIO *gpio;
+        void setDuty(uint16_t duty, int positive);
+    };
+    Channel *ch1, *ch2, *ch3, *ch4;
+
+
     //setup
     void setupTimer(TIM_TypeDef *tim);
     void setupPwmOutput(TIM_TypeDef *tim,
@@ -56,11 +66,10 @@ public:
 
     //PWM
     void PwmMode1Setup();
-    void duty(uint16_t duty);
 
 private:
     TIM_TypeDef *TIMx;
-    GPIO *ch1, *ch2, *ch3, *ch4;
+
 };
 
 #endif /* TIM_HPP_ */
